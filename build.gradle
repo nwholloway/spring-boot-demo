@@ -1,0 +1,68 @@
+plugins {
+    id 'java'
+    id 'org.springframework.boot' version '3.3.1'
+    id 'io.spring.dependency-management' version '1.1.5'
+}
+
+if (hasProperty('aot')) {
+    apply plugin: 'org.springframework.boot.aot'
+}
+
+group = 'com.github.nwholloway'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-jdbc'
+
+    implementation 'org.flywaydb:flyway-database-postgresql'
+    runtimeOnly 'org.postgresql:postgresql'
+
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'org.springframework.boot:spring-boot-testcontainers'
+
+    testImplementation 'org.testcontainers:postgresql'
+    testImplementation 'org.testcontainers:junit-jupiter'
+
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+
+tasks.named('test') {
+    useJUnitPlatform()
+}
+
+tasks.named('build') {
+    dependsOn(bootBuildImage)
+}
+
+tasks.named('bootBuildImage') {
+    shouldRunAfter 'check'
+
+    builder = "paketobuildpacks/builder-jammy-tiny"
+
+    environment.putAll([
+            'BP_SPRING_CLOUD_BINDINGS_DISABLED': 'true',
+            'BPE_BPL_JVM_THREAD_COUNT'         : '50'
+    ])
+    if (project.hasProperty('cds')) {
+        environment.putAll([
+                'BP_JVM_CDS_ENABLED'            : 'true',
+                'CDS_TRAINING_JAVA_TOOL_OPTIONS': '-Dspring.flyway.enabled=false -Dspring.sql.init.mode=never'
+        ])
+    }
+    if (project.hasProperty('aot')) {
+        environment.putAll([
+                'BP_SPRING_AOT_ENABLED': 'true'
+        ])
+    }
+}

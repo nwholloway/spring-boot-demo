@@ -1,0 +1,21 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    ports:
+      - "5432"
+    healthcheck:
+        test: [ "CMD", "pg_isready", "-U", "postgres", "-h", "localhost" ]
+        interval: 5s
+
+  app:
+    image: demo-app
+    ports:
+      - "8080"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/postgres
+    depends_on:
+      db:
+        condition: service_healthy
